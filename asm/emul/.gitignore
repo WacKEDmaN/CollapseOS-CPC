@@ -1,0 +1,18 @@
+/shell/shell
+/forth/stage1
+/forth/stage1dbg
+/forth/stage2
+/forth/stage2dbg
+/forth/forth
+/zasm/zasm
+/zasm/avra
+/runbin/runbin
+/*/*-bin.h
+/*/*.bin
+/cfsin/zasm
+/cfsin/ed
+/cfsin/user.h
+# Bootstrap binaries are part of the source (see emul/README.md)
+!/zasm/kernel.bin
+!/zasm/zasm.bin
+!/forth/z80c.bin

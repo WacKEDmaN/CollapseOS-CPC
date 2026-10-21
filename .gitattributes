@@ -1,0 +1,12 @@
+# CPC files must be stored byte for byte. Git for Windows (core.autocrlf)
+# would otherwise rewrite the CR LF line ends of the ASCII BASIC loader.
+*.BAS binary
+*.bas binary
+*.BIN binary
+*.bin binary
+*.DSK binary
+*.dsk binary
+*.BLK binary
+*.ZIP binary
+*.zip binary
+release/** binary

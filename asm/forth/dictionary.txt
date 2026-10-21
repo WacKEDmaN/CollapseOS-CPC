@@ -1,0 +1,217 @@
+Stack notation: "<stack before> -- <stack after>". Rightmost is top of stack
+(TOS). For example, in "a b -- c d", b is TOS before, d is TOS after. "R:" means
+that the Return Stack is modified. "I:" prefix means "IMMEDIATE", that is, that
+this stack transformation is made at compile time.
+
+DOES>: Used inside a colon definition that itself uses CREATE, DOES> transforms
+that newly created word into a "does cell", that is, a regular cell ( when
+called, puts the cell's addr on PS), but right after that, it executes words
+that appear after the DOES>.
+
+"does cells" always allocate 4 bytes (2 for the cell, 2 for the DOES> link) and
+there is no need for ALLOT in colon definition.
+
+At compile time, colon definition stops processing words when reaching the
+DOES>.
+
+Example: ": CONSTANT CREATE HERE @ ! DOES> @ ;"
+
+Word references (wordref): When we say we have a "word reference", it's a
+pointer to a words *code link*. For example, the label "PLUS:" in this unit is a
+word reference. Why not refer to the beginning of the word struct? Because we
+actually seldom refer to the name and prev link, except during compilation, so
+defining "word reference" this way makes the code easier to understand.
+
+Atom: A word of the type compiledWord contains, in its PF, a list of what we
+call "atoms". Those atoms are most of the time word references, but they can
+also be references to NUMBER and LIT.
+
+Words between "()" are "support words" that aren't really meant to be used
+directly, but as part of another word.
+
+"*I*" in description indicates an IMMEDIATE word.
+
+*** Defining words ***
+(find)      a -- a f        Read at a and find it in dict. If found, f=1 and
+                            a = wordref. If not found, f=0 and a = string addr.
+: x ...     --              Define a new word
+;           R:I --          Exit a colon definition
+,           n --            Write n in HERE and advance it.
+' x         -- a            Push addr of word x to a. If not found, aborts
+['] x       --              *I* Like "'", but spits the addr as a number
+                            literal. If not found, aborts.
+(           --              *I* Comment. Ignore rest of line until ")" is read.
+ALLOT       n --            Move HERE by n bytes
+C,          b --            Write byte b in HERE and advance it.
+CREATE x    --              Create cell named x. Doesn't allocate a PF.
+[COMPILE] x --              Compile word x and write it to HERE. IMMEDIATE
+                            words are *not* executed.
+COMPILE x   --              Meta compiles. Kind of blows the mind. See below.
+CONSTANT x  n --            Creates cell x that when called pushes its value
+DOES>       --              See description at top of file
+IMMED?      a -- f          Checks whether wordref at a is immediate.
+IMMEDIATE   --              Flag the latest defined word as immediate.
+LITN        n --            Write number n as a literal.
+[LITN]      n --            *I* Immediate version of LITN.
+ROUTINE x   -- a            Push the addr of the specified core routine
+                            C=cellWord L=compiledWord V=nativeWord N=next S=LIT
+                            M=NUMBER Y=sysvarWord D=doesWord
+VARIABLE c  --              Creates cell x with 2 bytes allocation.
+
+Compilation vs meta-compilation. When you compile a word with "[COMPILE] foo",
+its straightforward: It writes down to HERE wither the address of the word or
+a number literal.
+
+When you *meta* compile, it's a bit more mind blowing. It fetches the address
+of the word specified by the caller, then writes that number as a literal,
+followed by a reference to ",".
+
+Example: ": foo [COMPILE] bar;" is the equivalent of ": foo bar ;" if bar is
+not an immediate. However, ": foo COMPILE bar ;" is the equivalent of
+": foo ['] bar , ;". Got it?
+
+Meta-compile only works with real words, not number literals.
+
+*** Flow ***
+Note about flow words: flow words can only be used in definitions. In the
+INTERPRET loop, they don't have the desired effect because each word from the
+input stream is executed immediately. In this context, branching doesn't work.
+
+(fbr)       --              Branches forward by the number specified in its
+                            atom's cell.
+(bbr)       --              Branches backward by the number specified in its
+                            atom's cell.
+ABORT       --              Resets PS and RS and returns to interpreter
+ABORT" x"   --              *I* Compiles a ." followed by a ABORT.
+AGAIN       I:a --          *I* Jump backwards to preceeding BEGIN.
+BEGIN       -- I:a          *I* Marker for backward branching with AGAIN.
+ELSE        I:a --          *I* Compiles a (fbr) and set branching cell at a.
+EXECUTE     a --            Execute wordref at addr a
+IF          -- I:a          *I* Compiles a (fbr?) and pushes its cell's addr
+INTERPRET   --              Get a line from stdin, compile it in tmp memory,
+                            then execute the compiled contents.
+QUIT        R:drop --       Return to interpreter prompt immediately
+RECURSE     R:I -- R:I-2    Run the current word again.
+SKIP?       f --            If f is true, skip the execution of the next atom.
+                            Use this right before ";" and you're gonna have a
+                            bad time.
+THEN        I:a --          *I* Set branching cell at a.
+UNTIL       f --            *I* Jump backwards to BEGIN if f is *false*.
+
+*** Parameter Stack ***
+DROP        a --
+DUP         a -- a a
+OVER        a b -- a b a
+ROT         a b c -- b c a
+SWAP        a b -- b a
+2DUP        a b -- a b a b
+2OVER       a b c d -- a b c d a b
+2SWAP       a b c d -- c d a b
+
+*** Return Stack ***
+>R          n -- R:n        Pops PS and push to RS
+R>          R:n -- n        Pops RS and push to PS
+I           -- n            Copy RS TOS to PS
+I'          -- n            Copy RS second item to PS
+J           -- n            Copy RS third item to PS
+
+*** Memory ***
+@           a -- n          Set n to value at address a
+!           n a --          Store n in address a
+?           a --            Print value of addr a
++!          n a --          Increase value of addr a by n
+C@          a -- c          Set c to byte at address a
+C!          c a --          Store byte c in address a
+CURRENT     -- a            Set a to wordref of last added entry.
+HERE        -- a            Push HERE's address
+H           -- a            HERE @
+
+*** Arithmetic / Bits ***
+
++           a b -- c        a + b -> c
+-           a b -- c        a - b -> c
+-^          a b -- c        b - a -> c
+*           a b -- c        a * b -> c
+/           a b -- c        a / b -> c
+MOD         a b -- c        a % b -> c
+/MOD        a b -- r q      r:remainder q:quotient
+AND         a b -- c        a & b -> c
+OR          a b -- c        a | b -> c
+XOR         a b -- c        a ^ b -> c
+
+*** Logic ***
+=           n1 n2 -- f      Push true if n1 == n2
+<           n1 n2 -- f      Push true if n1 < n2
+>           n1 n2 -- f      Push true if n1 > n2
+CMP         n1 n2 -- n      Compare n1 and n2 and set n to -1, 0, or 1.
+                            n=0: a1=a2. n=1: a1>a2. n=-1: a1<a2.
+NOT         f -- f          Push the logical opposite of f
+
+*** Strings ***
+LIT         --              Write a LIT entry. You're expected to write actual
+                            string to HERE right afterwards.
+LIT< x      --              Read following word and write to HERE as a string
+                            literal.
+LITS        a --            Write word at addr a as a atring literal.
+SCMP        a1 a2 -- n      Compare strings a1 and a2. See CMP
+SCPY        a --            Copy string at addr a into HERE.
+SLEN        a -- n          Push length of str at a.
+
+*** I/O ***
+
+A little word about inputs. There are two kind of inputs: direct and buffered.
+As a general rule, we read line in a buffer, then feed words in it to the
+interpreter. That's what "WORD" does. If it's at the End Of Line, it blocks and
+wait until another line is entered.
+
+KEY input, however, is direct. Regardless of the input buffer's state, KEY will
+return the next typed key.
+
+PARSING AND BOOTSTRAP: Parsing number literal is a very "core" activity of
+Forth, and therefore generally seen as having to be implemented in native code.
+However, Collapse OS' Forth supports many kinds of literals: decimal, hex, char,
+binary. This incurs a significant complexity penalty.
+
+What if we could implement those parsing routines in Forth? "But it's a core
+routine!" you say. Yes, but here's the deal: at its native core, only decimal
+parsing is supported. It lives in the "(parsed)" word. The interpreter's main
+loop is initially set to simply call that word.
+
+However, in core.fs, "(parsex)", "(parsec)" and "(parseb)" are implemented, in
+Forth, then "(parse)", which goes through them all is defined. Then, "(parsef)",
+which is the variable in which the interpreter's word pointer is set, is
+updated to that new "(parse)" word.
+
+This way, we have a full-featured (and extensible) parsing with a tiny native
+core.
+
+(parse)     a -- n          Parses string at a as a number and push the result
+                            in n as well as whether parsing was a success in f
+                            (false = failure, true = success)
+(parse.)    a -- n f        Sub-parsing words. They all have the same signature.
+                            Parses string at a as a number and push the result
+                            in n as well as whether parsing was a success in f
+                            (0 = failure, 1 = success)
+(parse*)    -- a            Variable holding the current pointer for system
+                            number parsing. By default, (parse).
+(print)     a --            Print string at addr a.
+.           n --            Print n in its decimal form
+.X          n --            Print n in its hexadecimal form. In hex, numbers
+." xxx"     --              *I* Compiles string literal xxx followed by a call
+                            to (print)
+                            are never considered negative. "-1 .X -> ffff"
+C<          -- c            Read one char from buffered input.
+EMIT        c --            Spit char c to output stream
+IN>         -- a            Address of variable containing current pos in input
+                            buffer.
+KEY         -- c            Get char c from direct input
+PC!         c a --          Spit c to port a
+PC@         a -- c          Fetch c from port a
+WORD        -- a            Read one word from buffered input and push its addr
+
+There are also ascii const emitters:
+BS
+CR
+LF
+SPC
+

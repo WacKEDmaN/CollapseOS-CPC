@@ -1,0 +1,39 @@
+# Forth build outputs
+forth/cvm/stage
+forth/cvm/cos-grid
+forth/cvm/cos-serial
+forth/cvm/blkfs
+forth/cvm/grid.bin
+forth/cvm/*.o
+forth/tools/*.o
+forth/tools/blkpack
+forth/emul/z80/*.o
+forth/emul/z80/forth
+forth/emul/z80/rc2014
+forth/emul/z80/trs80
+forth/emul/z80/sms
+forth/emul/z80/ti84
+forth/arch/z80/cpc/os.bin
+forth/arch/z80/cpc/boot.bin
+forth/arch/z80/cpc/COLLAPS.*
+forth/arch/z80/cpc/blkgroups/
+# asm build outputs
+asm/emul/libz80/
+asm/emul/*.o
+asm/emul/*/*-bin.h
+asm/emul/zasm/zasm
+asm/emul/zasm/avra
+asm/emul/shell/shell
+asm/emul/shell/shell.bin
+asm/emul/runbin/runbin
+asm/emul/forth/forth
+asm/tools/cfspack/cfspack
+asm/tools/cfspack/*.o
+asm/recipes/cpc/os.bin
+asm/recipes/cpc/COLLAPSE.BIN
+asm/recipes/cpc/collapse.dsk
+# test runs
+test/out/
+__pycache__/
+test/roms/
+memdump
